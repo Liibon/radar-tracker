@@ -1,0 +1,16 @@
+{
+  "compiler_probe": {
+    "error": "nvcc not found",
+    "ok": false
+  },
+  "cuda_build_and_run_candidate": false,
+  "cuda_device_available": false,
+  "device_probe": {
+    "error": "nvidia-smi not found",
+    "ok": false
+  },
+  "host": "Liibaans-MacBook-Air-9.local",
+  "nvcc_available": false,
+  "platform": "macOS-15.3.2-arm64-arm-64bit-Mach-O",
+  "warning": "This environment probe does not prove that the tracker executed a CUDA code path; runtime backend logging and output validation are required."
+}
