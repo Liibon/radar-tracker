@@ -1,7 +1,7 @@
 # Radar Multi-Object Tracker
 
-An end-to-end tracking capstone: Python generates deterministic target motion,
-noisy radar detections, clutter, and plots; C++17 performs Kalman/EKF tracking,
+An end-to-end tracking capstone: Python imports real automotive radar or generates
+deterministic synthetic scenarios and plots; C++17 performs Kalman/EKF tracking,
 nearest-neighbor association, track lifecycle management, two-sensor fusion,
 threaded CPU association, and optional CUDA association.
 
@@ -14,12 +14,13 @@ threaded CPU association, and optional CUDA association.
 - Multiple targets, Poisson clutter, missed detections, and two sensors
 - Serial CPU, threaded CPU, and a real CUDA distance-matrix backend
 - Seeded simulation, path/error plots, unit and integration tests
+- A label-free RadarScenes adapter and byte-range sample downloader
 - Benchmark tooling that keeps unavailable CUDA results distinct from CPU data
 
 The CUDA backend is optional at build time. A non-CUDA machine builds a stub
 that reports CUDA as unavailable; it never labels CPU fallback as GPU work.
 
-## Quick start
+## Real-world quick start
 
 Requirements: CMake 3.18+, a C++17 compiler, and Python 3.10+.
 
@@ -32,6 +33,30 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 
+# Fetch only sequence 158 (~8 MB extracted), not the complete 11 GB archive.
+.venv/bin/python -m python.download_radarscenes_sample
+.venv/bin/python -m python.run_radarscenes \
+  real_data/radarscenes_sequence_158
+```
+
+This uses genuine measurements from four automotive radars in the
+[RadarScenes dataset](https://radar-scenes.com/) (sequence 158). Input objects
+are created with compensated-radial-velocity filtering and Euclidean connected
+components; labels are not used by detection, clustering, association, or the
+filter. Point-wise track labels are read separately for evaluation. Outputs go
+to `real_output/`, including `metrics.json`, trajectories, and position-error
+plots. The downloaded data remains under RadarScenes' CC BY-NC-SA 4.0 license
+and is intentionally excluded from Git.
+
+See [`docs/REAL_DATA.md`](docs/REAL_DATA.md) for provenance, transformation
+details, evaluation semantics, and limitations.
+
+## Synthetic regression scenario
+
+The simulator remains useful for exact, seeded tests where motion and noise are
+known:
+
+```bash
 .venv/bin/python -m python.runner \
   --tracker './build/radar_tracker --measurements {measurements} --output {estimates}'
 ```
@@ -63,9 +88,9 @@ timestamp,sensor_id,measurement_id,type,value1,value2,true_target_id,
 sensor_x,sensor_y,range_std,bearing_std,position_std
 ```
 
-`sensor_x` and `sensor_y` are required, including for a sensor at `(0, 0)`.
-Readers reject missing coordinates instead of silently changing polar geometry
-by assuming an origin.
+Newly generated files always include `sensor_x` and `sensor_y`, including for a
+sensor at `(0, 0)`. The C++ reader retains origin defaults only for legacy
+single-sensor files that predate the explicit coordinate columns.
 
 ## CUDA and performance
 
@@ -101,6 +126,7 @@ include/tracker/     public C++ interfaces and small matrix library
 src/                 filter, association, lifecycle, CSV, CLI, CUDA backend
 python/              simulator, pipeline runner, metrics, and plotting
 tests/               deterministic C++/Python tests and CUDA environment probe
+docs/REAL_DATA.md    real-data provenance, processing, metrics, and caveats
 docs/REPORT.md       mathematical model, design, evaluation, and limitations
 docs/TEST_PLAN.md    verification and benchmark acceptance criteria
 ```

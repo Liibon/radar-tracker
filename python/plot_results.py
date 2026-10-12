@@ -68,6 +68,7 @@ def plot_results(
     measurements = read_measurements(measurement_path)
     estimates = read_estimates(estimate_path) if estimate_path and Path(estimate_path).exists() else []
     sensors: dict[int, dict] = {}
+    metadata: dict = {}
     if metadata_path and Path(metadata_path).exists():
         metadata = json.loads(Path(metadata_path).read_text(encoding="utf-8"))
         sensors = {int(sensor["sensor_id"]): sensor for sensor in metadata.get("sensors", [])}
@@ -76,9 +77,11 @@ def plot_results(
 
     fig, ax = plt.subplots(figsize=(10, 8))
     colors = plt.colormaps["tab10"]
+    real_data = str(metadata.get("source", "")).startswith("RadarScenes")
+    truth_label = "annotation" if real_data else "truth"
     for target_id, rows in _group(truth, "target_id").items():
         ax.plot([r["x"] for r in rows], [r["y"] for r in rows], lw=2,
-                color=colors(target_id % 10), label=f"truth {target_id}")
+                color=colors(target_id % 10), label=f"{truth_label} {target_id}")
     detections = [r for r in measurements if r["true_target_id"] >= 0]
     clutter = [r for r in measurements if r["true_target_id"] < 0]
     if detections:
@@ -92,7 +95,8 @@ def plot_results(
                 label=f"estimate {track_id}")
     for sensor_id, sensor in sensors.items():
         ax.scatter(sensor["x"], sensor["y"], marker="^", s=80, edgecolor="black", label=f"sensor {sensor_id}")
-    ax.set(title="Target trajectories and radar observations", xlabel="x (m)", ylabel="y (m)")
+    title = "RadarScenes tracks and radar observations" if real_data else "Target trajectories and radar observations"
+    ax.set(title=title, xlabel="x (m)", ylabel="y (m)")
     ax.axis("equal")
     ax.grid(alpha=0.25)
     ax.legend(fontsize=8, ncol=2)
@@ -103,15 +107,26 @@ def plot_results(
 
     errors_path = output / "errors.png"
     errors = _matched_errors(truth, estimates)
-    fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+    velocity_reliable = metadata.get("truth_velocity_reliable", True)
+    if velocity_reliable:
+        fig, axes_value = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+        axes = list(axes_value)
+    else:
+        fig, axis = plt.subplots(figsize=(10, 4.8))
+        axes = [axis]
     for track_id, values in errors.items():
         t = [v[0] for v in values]
         axes[0].plot(t, [v[1] for v in values], label=f"track {track_id}")
-        axes[1].plot(t, [v[2] for v in values], label=f"track {track_id}")
+        if velocity_reliable:
+            axes[1].plot(t, [v[2] for v in values], label=f"track {track_id}")
     axes[0].set_ylabel("position error (m)")
-    axes[1].set_ylabel("velocity error (m/s)")
-    axes[1].set_xlabel("time (s)")
-    axes[0].set_title("Nearest-truth estimation error")
+    if velocity_reliable:
+        axes[1].set_ylabel("velocity error (m/s)")
+        axes[1].set_xlabel("time (s)")
+        axes[0].set_title("Nearest-truth estimation error")
+    else:
+        axes[0].set_xlabel("time (s)")
+        axes[0].set_title("Position error against RadarScenes annotation centroids")
     for ax in axes:
         ax.grid(alpha=0.25)
     if errors:

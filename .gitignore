@@ -26,6 +26,7 @@ Makefile
 __pycache__/
 *.py[cod]
 .venv/
+.venv*/
 venv/
 .pytest_cache/
 .mypy_cache/
@@ -35,6 +36,8 @@ output/
 output-*/
 results/
 plots/
+real_data/
+real_output/
 benchmarks/*.csv
 benchmarks/*.json
 *.prof
