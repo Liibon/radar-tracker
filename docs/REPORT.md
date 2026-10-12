@@ -200,10 +200,9 @@ GPU acceleration is considered delivered only when a CUDA-capable build:
 - is timed using CUDA events with synchronization at measurement boundaries.
 
 A threaded, SIMD, mock, stub, or CPU fallback is useful functionality but is
-**not GPU acceleration**. If CUDA hardware/tooling is unavailable, the report
-must say `CUDA not available; GPU benchmark not run`, record the probe output,
-and report CPU results separately. No GPU speedup number may be inferred from a
-fallback.
+**not GPU acceleration**. The original Apple M2 run therefore records CUDA as
+unavailable rather than treating its CPU fallback as GPU work. A later Runpod
+run used an actual NVIDIA device and is reported separately below.
 
 Speedup is `T_cpu / T_gpu` for identical inputs and semantics. Record both
 kernel-only timing and end-to-end timing including allocation and host/device
@@ -224,8 +223,25 @@ kernel median/p95, end-to-end median/p95, peak memory
 CPU/GPU agreement tolerance and validation result
 ```
 
-This report intentionally contains no fabricated speedup figure. Results are
-added only after executing the benchmark on identified hardware.
+### 5.3 Measured CUDA result
+
+The CUDA requirement was executed on an NVIDIA RTX 2000 Ada Generation with
+CUDA 12.4.131 and driver 580.159.04. All three C++ tests passed, runtime output
+identified the active CUDA device, and the greatest absolute difference from
+the serial CPU output was `7.45058059692e-09`.
+
+For a 4,096 by 4,096 distance matrix over 20 measured repetitions, serial CPU
+median latency was 105.875 ms, CUDA kernel median latency was 0.843 ms, and
+CUDA end-to-end median latency was 79.111 ms. This is a **125.60x kernel-only
+speedup** and a **1.34x end-to-end speedup**. At 512 by 512, end-to-end CUDA
+was slower than serial CPU (0.63x), demonstrating that launch, allocation, and
+transfer overhead matters for small workloads. The operational crossover in
+this run occurred between 512 and 1,024 objects.
+
+These are association distance-matrix microbenchmark results, not a claim that
+the full multi-object tracker is 125.60x faster. The complete environment,
+p95 values, and 320 raw timing samples are preserved in
+`docs/BENCHMARK_RECORD.md` and `benchmarks/results/runpod_rtx2000_*.csv`.
 
 ## 6. Expected limitations
 

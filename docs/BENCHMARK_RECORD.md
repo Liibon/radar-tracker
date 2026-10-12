@@ -87,3 +87,59 @@ fallback must remain labeled CPU.
 - Main bottleneck and profiler evidence: Not measured.
 - Threats to validity: short microbenchmark, one machine, OS scheduling noise,
   no affinity pinning, and no full association sort or end-to-end tracker work.
+
+## CUDA record: Runpod RTX 2000 Ada
+
+This is a separate measurement from the Apple M2 CPU record above. It was
+executed on real CUDA hardware on 2026-10-12 at git commit `6766088` using a
+Release build configured with `-DTRACKER_ENABLE_CUDA=ON`.
+
+### Environment
+
+| Field | Value |
+|---|---|
+| Provider / pod | Runpod Secure Cloud; ephemeral pod, deleted after collection |
+| Allocated CPU / RAM | 6 vCPU / 31 GiB; AMD EPYC 7443P host |
+| GPU | NVIDIA RTX 2000 Ada Generation, 16,380 MiB |
+| Driver / CUDA compiler | 580.159.04 / CUDA 12.4.131 |
+| Compiler / build | GCC 11.4.0 / CMake 3.22.1 / Release |
+| Runtime backend | `CUDA backend active; device=NVIDIA RTX 2000 Ada Generation` |
+| Warm-up / measured runs | 3 / 20 per backend and matrix size |
+| Correctness | Maximum CPU/CUDA absolute difference `7.45058059692e-09` |
+| Unit tests | 3 of 3 CTest tests passed |
+
+The workload computes the complete pairwise squared-distance matrix for equal
+numbers of tracks and measurements. `cuda-kernel` is measured with CUDA events.
+`cuda-end-to-end` additionally includes allocation, host/device transfers,
+result transfer, and synchronization.
+
+### Timing results
+
+| Matrix | Backend | Median (ms) | p95 (ms) | Speedup vs serial CPU |
+|---:|---|---:|---:|---:|
+| 512 x 512 | Serial CPU | 0.521544 | 0.587780 | 1.00x |
+| 512 x 512 | CUDA end to end | 0.826970 | 0.848852 | 0.63x |
+| 512 x 512 | CUDA kernel | 0.020064 | 0.020323 | 25.99x |
+| 1,024 x 1,024 | Serial CPU | 2.052989 | 2.264666 | 1.00x |
+| 1,024 x 1,024 | CUDA end to end | 1.543601 | 1.566384 | 1.33x |
+| 1,024 x 1,024 | CUDA kernel | 0.059360 | 0.060006 | 34.59x |
+| 2,048 x 2,048 | Serial CPU | 23.413266 | 23.869210 | 1.00x |
+| 2,048 x 2,048 | CUDA end to end | 18.881013 | 23.097942 | 1.24x |
+| 2,048 x 2,048 | CUDA kernel | 0.218512 | 0.219499 | 107.15x |
+| 4,096 x 4,096 | Serial CPU | 105.875467 | 107.428888 | 1.00x |
+| 4,096 x 4,096 | CUDA end to end | 79.111374 | 82.787774 | 1.34x |
+| 4,096 x 4,096 | CUDA kernel | 0.842928 | 0.844453 | 125.60x |
+
+The operational crossover occurred between 512 and 1,024 objects. At 4,096,
+the kernel itself was 125.60x faster than serial CPU, while transfer and
+allocation overhead reduced the honest end-to-end speedup to 1.34x. The small
+maximum difference is consistent with GPU/CPU floating-point evaluation order
+and passed the benchmark's declared correctness check.
+
+Raw samples and environment capture:
+
+- `benchmarks/results/runpod_rtx2000_512.csv`
+- `benchmarks/results/runpod_rtx2000_1024.csv`
+- `benchmarks/results/runpod_rtx2000_2048.csv`
+- `benchmarks/results/runpod_rtx2000_4096.csv`
+- `benchmarks/results/runpod_rtx2000_environment.txt`

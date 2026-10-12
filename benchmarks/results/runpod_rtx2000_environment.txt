@@ -1,0 +1,9 @@
+NVIDIA RTX 2000 Ada Generation, 580.159.04, 16380 MiB
+Build cuda_12.4.r12.4/compiler.34097967_0
+cmake version 3.22.1
+g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+Linux 0e03e0ed4ccd 6.8.0-138-generic #138~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Aug  7 13:43:15 UTC  x86_64 x86_64 x86_64 GNU/Linux
+Runpod allocation: 6 vCPU, 31 GiB RAM
+Visible host CPU: AMD EPYC 7443P 24-Core Processor, 48 logical CPUs
+Git commit: 6766088
+Build: Release, TRACKER_ENABLE_CUDA=ON
