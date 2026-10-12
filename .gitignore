@@ -1,0 +1,46 @@
+# Build products
+build/
+build-*/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+Makefile
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# CUDA and profiling output
+*.cubin
+*.fatbin
+*.ptx
+*.nsys-rep
+*.qdrep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Generated experiment artifacts
+output/
+output-*/
+results/
+plots/
+benchmarks/*.csv
+benchmarks/*.json
+*.prof
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
