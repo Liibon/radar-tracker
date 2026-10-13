@@ -43,7 +43,9 @@ This uses genuine measurements from four automotive radars in the
 [RadarScenes dataset](https://radar-scenes.com/) (sequence 158). Input objects
 are created with compensated-radial-velocity filtering and Euclidean connected
 components; labels are not used by detection, clustering, association, or the
-filter. Point-wise track labels are read separately for evaluation. Outputs go
+filter. Point-wise track labels are read separately for evaluation, where
+tracks are matched independently by geometry instead of trusting labels copied
+through tracker state. Outputs go
 to `real_output/`, including `metrics.json`, trajectories, and position-error
 plots. The downloaded data remains under RadarScenes' CC BY-NC-SA 4.0 license
 and is intentionally excluded from Git.

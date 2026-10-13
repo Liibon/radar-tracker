@@ -27,7 +27,8 @@ the dataset license.
 Each real radar scan is processed as follows:
 
 1. Discard non-finite returns and returns whose ego-compensated absolute radial
-   speed is below 0.5 m/s. This suppresses most static infrastructure.
+   speed is below 0.2 m/s. A 192-run parameter sweep selected this value as the
+   best recall improvement that retained only one false confirmed track.
 2. Transformations supplied by RadarScenes (`x_seq`, `y_seq`, ego odometry,
    and sensor calibration) place returns in the global sequence frame.
 3. Form connected components within 1.8 m. Components require at least two
@@ -40,8 +41,9 @@ No semantic label or track ID is consulted in these four steps. The resulting
 C++ filter and association cost do not read that field when making decisions.
 
 Separately, point-wise RadarScenes track IDs are grouped into annotation
-centroids in `truth.csv`. These centroids are used to score and color output
-after tracking.
+centroids in `truth.csv`. Evaluation does not trust the `true_target_id` copied
+through a track. It independently performs deterministic one-to-one geometric
+matching between estimates and annotation centroids in each frame, within 2 m.
 
 ## Reproduce the included run
 
@@ -54,33 +56,46 @@ cmake --build build --parallel
 .venv/bin/python -m python.download_radarscenes_sample
 .venv/bin/python -m python.run_radarscenes \
   real_data/radarscenes_sequence_158
+
+# Reproduce the 192-configuration selection procedure.
+.venv/bin/python -m python.tune_radarscenes \
+  real_data/radarscenes_sequence_158 \
+  --output docs/real_tuning_sequence_158.json
 ```
 
-Default real-data tracker parameters are a 3 m association gate, 12 tolerated
+Default real-data tracker parameters are a 2 m association gate, 12 tolerated
 missed aggregate sensor scans, and 3 hits for confirmation. They are explicit
 CLI options rather than changes to the synthetic defaults.
 
 ## Measured sequence-158 result
 
 The downloaded sequence contains 74,616 raw returns over 14.526 seconds. The
-label-free front end retained 1,393 moving returns and formed 313 multi-return
-components. The reference run produced:
+label-free front end retained 1,556 moving returns and formed 335 multi-return
+components. The selected configuration produced:
 
 | Metric | Result |
 |---|---:|
 | Annotated targets in sequence | 13 |
-| Targets surviving the conservative front end | 5 |
-| Targets with confirmed tracks | 4 |
-| Confirmed track IDs | 5 |
+| Targets surviving the front end | 6 (46.2%) |
+| Targets with confirmed tracks | 5 (38.5%) |
+| Confirmation rate given detection | 83.3% |
+| Confirmed track IDs | 7 |
 | False confirmed tracks | 1 |
-| Track fragmentations | 0 |
-| Matched estimate samples | 315 |
-| Position RMSE against annotation centroids | 0.366 m |
-| Median position error | 0.257 m |
+| False confirmed-track rate | 14.3% |
+| Track fragmentations | 1 |
+| Identity switches | 0 |
+| Matched estimate samples | 327 |
+| Position RMSE against annotation centroids | 0.369 m |
+| Median position error | 0.253 m |
 | 95th-percentile position error | 0.696 m |
 
-These values are generated in `real_output/metrics.json` and are not substituted
-for the synthetic benchmark results.
+The former configuration recovered 4 targets with 1 false track. The selected
+configuration recovers 5 with the same false-track count: a 25% increase in
+confirmed-target coverage, at the cost of one fragmentation and essentially
+unchanged position error. These values are generated in
+`real_output/metrics.json` and are not substituted for synthetic results.
+The complete ranked tuning result, parameters, and selection policy are stored
+in `docs/real_tuning_sequence_158.json`.
 
 ## Interpretation and limitations
 

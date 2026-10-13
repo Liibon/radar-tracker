@@ -8,11 +8,6 @@ import math
 from collections import defaultdict
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import numpy as np
-
 try:  # Support both ``python -m python.plot_results`` and direct execution.
     from .csv_io import read_estimates, read_measurements, read_truth
 except ImportError:  # pragma: no cover - exercised by command-line usage
@@ -64,6 +59,13 @@ def plot_results(
     estimate_path: str | Path | None, metadata_path: str | Path | None,
     output_dir: str | Path,
 ) -> list[Path]:
+    # Keep scoring, CSV utilities, and headless CLI runs independent of the
+    # relatively heavy plotting stack.
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+
     truth = read_truth(truth_path)
     measurements = read_measurements(measurement_path)
     estimates = read_estimates(estimate_path) if estimate_path and Path(estimate_path).exists() else []

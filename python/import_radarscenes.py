@@ -186,7 +186,7 @@ def _measurement_rows(
 
 def import_sequence(
     sequence_dir: str | Path, output_dir: str | Path, *,
-    radial_velocity_threshold: float = 0.5, cluster_radius: float = 1.8,
+    radial_velocity_threshold: float = 0.2, cluster_radius: float = 1.8,
     truth_match_radius: float = 2.0, min_cluster_points: int = 2,
 ) -> tuple[Path, Path, Path]:
     try:
@@ -254,7 +254,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("sequence_dir", type=Path)
     parser.add_argument("--output-dir", type=Path, default=Path("real_output"))
-    parser.add_argument("--radial-velocity-threshold", type=float, default=0.5)
+    parser.add_argument("--radial-velocity-threshold", type=float, default=0.2)
     parser.add_argument("--cluster-radius", type=float, default=1.8)
     parser.add_argument("--truth-match-radius", type=float, default=2.0)
     parser.add_argument("--min-cluster-points", type=int, default=2)
