@@ -17,12 +17,13 @@ struct Options {
   int max_misses{2};
   int confirm_hits{2};
   bool parallel{true};
-  bool gpu{false};
+  std::string accelerator{"cpu"};
 };
 
 void usage(const char* program) {
   std::cerr << "Usage: " << program << " --measurements measurements.csv --output estimates.csv [options]\n"
-            << "Options: --gate METERS --max-misses N --confirm-hits N --serial --gpu\n";
+            << "Options: --gate METERS --max-misses N --confirm-hits N --serial\n"
+            << "         --accelerator cpu|cuda|opencl\n";
 }
 
 Options parse_options(int argc, char** argv) {
@@ -39,13 +40,18 @@ Options parse_options(int argc, char** argv) {
     else if (arg == "--max-misses") options.max_misses = std::stoi(value("--max-misses"));
     else if (arg == "--confirm-hits") options.confirm_hits = std::stoi(value("--confirm-hits"));
     else if (arg == "--serial") options.parallel = false;
-    else if (arg == "--gpu") options.gpu = true;
+    else if (arg == "--accelerator") options.accelerator = value("--accelerator");
+    else if (arg == "--gpu") options.accelerator = "cuda";  // Backward-compatible alias.
+    else if (arg == "--opencl") options.accelerator = "opencl";
     else if (arg == "--help" || arg == "-h") { usage(argv[0]); std::exit(0); }
     else throw std::runtime_error("unknown option: " + arg);
   }
   if (options.input.empty() || options.output.empty()) throw std::runtime_error("--measurements and --output are required");
   if (options.gate <= 0 || options.max_misses < 0 || options.confirm_hits < 1)
     throw std::runtime_error("gate and track-management parameters must be positive");
+  if (options.accelerator != "cpu" && options.accelerator != "cuda" &&
+      options.accelerator != "opencl")
+    throw std::runtime_error("--accelerator must be cpu, cuda, or opencl");
   return options;
 }
 
@@ -56,7 +62,8 @@ int main(int argc, char** argv) {
     const Options options = parse_options(argc, argv);
     const auto measurements = tracker::read_measurements_csv(options.input);
     tracker::TrackManager manager(options.gate, options.max_misses, options.confirm_hits,
-                                  options.parallel, options.gpu);
+                                  options.parallel, options.accelerator == "cuda",
+                                  options.accelerator == "opencl");
     std::vector<tracker::Estimate> all_estimates;
     const auto started = std::chrono::steady_clock::now();
     for (std::size_t begin = 0; begin < measurements.size();) {
@@ -70,8 +77,10 @@ int main(int argc, char** argv) {
     tracker::write_estimates_csv(options.output, all_estimates);
     const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
     std::cerr << "processed " << measurements.size() << " measurements into " << all_estimates.size()
-              << " estimates in " << elapsed << " s; CUDA="
-              << (tracker::gpu_backend_available() ? (options.gpu ? "requested" : "available") : "unavailable") << '\n';
+              << " estimates in " << elapsed << " s; accelerator=" << options.accelerator
+              << "; CUDA=" << (tracker::cuda_backend_available() ? "available" : "unavailable")
+              << "; OpenCL="
+              << (tracker::opencl_backend_available() ? "available" : "unavailable") << '\n';
     return 0;
   } catch (const std::exception& error) {
     std::cerr << "radar_tracker: " << error.what() << '\n';

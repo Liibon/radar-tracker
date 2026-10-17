@@ -56,13 +56,13 @@ class CudaEvent {
 
 }  // namespace
 
-bool gpu_backend_available() {
+bool cuda_backend_available() {
   int count = 0;
   return cudaGetDeviceCount(&count) == cudaSuccess && count > 0;
 }
 
-std::string gpu_device_name() {
-  if (!gpu_backend_available()) return {};
+std::string cuda_device_name() {
+  if (!cuda_backend_available()) return {};
   int device = 0;
   cuda_check(cudaGetDevice(&device), "cudaGetDevice");
   cudaDeviceProp properties{};
@@ -70,10 +70,10 @@ std::string gpu_device_name() {
   return properties.name;
 }
 
-GpuDistanceResult gpu_squared_distances_timed(
+CudaDistanceResult cuda_squared_distances_timed(
     const std::vector<TrackView>& tracks,
     const std::vector<Measurement>& measurements) {
-  if (!gpu_backend_available()) throw std::runtime_error("no CUDA device is available");
+  if (!cuda_backend_available()) throw std::runtime_error("no CUDA device is available");
   if (tracks.empty() || measurements.empty()) return {};
   if (tracks.size() > std::numeric_limits<std::size_t>::max() / measurements.size())
     throw std::overflow_error("association distance matrix size overflow");
@@ -87,7 +87,7 @@ GpuDistanceResult gpu_squared_distances_timed(
     measurement_xy[2 * i + 1] = measurement_y(measurements[i]);
   }
   const std::size_t count = tracks.size() * measurements.size();
-  GpuDistanceResult result;
+  CudaDistanceResult result;
   result.distances.resize(count);
   DeviceBuffer device_tracks(track_xy.size() * sizeof(double));
   DeviceBuffer device_measurements(measurement_xy.size() * sizeof(double));
@@ -120,9 +120,9 @@ GpuDistanceResult gpu_squared_distances_timed(
   return result;
 }
 
-std::vector<double> gpu_squared_distances(const std::vector<TrackView>& tracks,
-                                          const std::vector<Measurement>& measurements) {
-  return gpu_squared_distances_timed(tracks, measurements).distances;
+std::vector<double> cuda_squared_distances(const std::vector<TrackView>& tracks,
+                                           const std::vector<Measurement>& measurements) {
+  return cuda_squared_distances_timed(tracks, measurements).distances;
 }
 
 }  // namespace tracker

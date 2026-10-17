@@ -21,6 +21,7 @@ struct Options {
   int repetitions{20};
   std::string output;
   bool require_cuda{false};
+  bool require_opencl{false};
 };
 
 Options parse_options(int argc, char** argv) {
@@ -39,6 +40,7 @@ Options parse_options(int argc, char** argv) {
       options.repetitions = std::stoi(next(i, "--repetitions"));
     else if (argument == "--output") options.output = next(i, "--output");
     else if (argument == "--require-cuda") options.require_cuda = true;
+    else if (argument == "--require-opencl") options.require_opencl = true;
     else throw std::runtime_error("unknown option: " + argument);
   }
   if (options.tracks == 0 || options.measurements == 0 || options.warmup < 0 ||
@@ -119,23 +121,47 @@ int main(int argc, char** argv) {
     std::cerr << "threaded CPU backend disabled at build time; threaded benchmark not run\n";
 #endif
 
-    if (!tracker::gpu_backend_available()) {
+    if (!tracker::cuda_backend_available()) {
       std::cerr << "CUDA not available; GPU benchmark not run\n";
-      return options.require_cuda ? 2 : 0;
+      if (options.require_cuda) return 2;
+    } else {
+      std::cerr << "CUDA backend active; device=" << tracker::cuda_device_name() << '\n';
+      for (int iteration = -options.warmup; iteration < options.repetitions; ++iteration) {
+        tracker::CudaDistanceResult result;
+        const double elapsed = elapsed_milliseconds(
+            [&] { result = tracker::cuda_squared_distances_timed(tracks, measurements); });
+        const double difference = maximum_error(reference, result.distances);
+        const double scale = *std::max_element(reference.begin(), reference.end());
+        if (!std::isfinite(difference) || difference > 1e-12 * std::max(1.0, scale))
+          throw std::runtime_error("CUDA result disagrees with serial CPU result");
+        if (iteration >= 0) {
+          write_row(*output, "cuda-end-to-end", options, iteration, elapsed,
+                    result.kernel_milliseconds, difference);
+          write_row(*output, "cuda-kernel", options, iteration, result.kernel_milliseconds,
+                    result.kernel_milliseconds, difference);
+        }
+      }
     }
-    std::cerr << "CUDA backend active; device=" << tracker::gpu_device_name() << '\n';
+
+    if (!tracker::opencl_backend_available()) {
+      std::cerr << "OpenCL not available; portable benchmark not run\n";
+      return options.require_opencl ? 3 : 0;
+    }
+    std::cerr << "OpenCL backend active; device=" << tracker::opencl_device_name() << '\n';
     for (int iteration = -options.warmup; iteration < options.repetitions; ++iteration) {
-      tracker::GpuDistanceResult result;
+      tracker::OpenClDistanceResult result;
       const double elapsed = elapsed_milliseconds(
-          [&] { result = tracker::gpu_squared_distances_timed(tracks, measurements); });
+          [&] { result = tracker::opencl_squared_distances_timed(tracks, measurements); });
       const double difference = maximum_error(reference, result.distances);
       const double scale = *std::max_element(reference.begin(), reference.end());
-      if (!std::isfinite(difference) || difference > 1e-12 * std::max(1.0, scale))
-        throw std::runtime_error("CUDA result disagrees with serial CPU result");
+      // OpenCL deliberately uses float32 so the kernel runs on GPUs, CPUs, and
+      // embedded accelerators that do not expose fp64.
+      if (!std::isfinite(difference) || difference > 5e-6 * std::max(1.0, scale))
+        throw std::runtime_error("OpenCL result disagrees with serial CPU beyond float32 tolerance");
       if (iteration >= 0) {
-        write_row(*output, "cuda-end-to-end", options, iteration, elapsed,
+        write_row(*output, "opencl-end-to-end", options, iteration, elapsed,
                   result.kernel_milliseconds, difference);
-        write_row(*output, "cuda-kernel", options, iteration, result.kernel_milliseconds,
+        write_row(*output, "opencl-kernel", options, iteration, result.kernel_milliseconds,
                   result.kernel_milliseconds, difference);
       }
     }

@@ -10,9 +10,10 @@
 namespace tracker {
 
 TrackManager::TrackManager(double gate_distance, int max_misses, int confirmation_hits,
-                           bool parallel, bool prefer_gpu)
+                           bool parallel, bool prefer_gpu, bool prefer_opencl)
     : gate_distance_(gate_distance), max_misses_(max_misses),
-      confirmation_hits_(confirmation_hits), parallel_(parallel), prefer_gpu_(prefer_gpu) {
+      confirmation_hits_(confirmation_hits), parallel_(parallel), prefer_gpu_(prefer_gpu),
+      prefer_opencl_(prefer_opencl) {
   if (!std::isfinite(gate_distance_) || gate_distance_ <= 0.0 || max_misses_ < 0 ||
       confirmation_hits_ < 1)
     throw std::invalid_argument("invalid track manager configuration");
@@ -59,7 +60,7 @@ std::vector<Estimate> TrackManager::process_batch(
     views.reserve(tracks_.size());
     for (const auto& track : tracks_) views.push_back({track.id, track.filter.x(), track.filter.y()});
     const auto matches = nearest_neighbor_association(
-        views, sensor_measurements, gate_distance_, parallel_, prefer_gpu_);
+        views, sensor_measurements, gate_distance_, parallel_, prefer_gpu_, prefer_opencl_);
     std::vector<bool> matched_measurements(sensor_measurements.size());
     for (const auto& match : matches) {
       Track& track = tracks_[match.track_index];

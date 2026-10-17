@@ -29,7 +29,7 @@ class TrackManager {
  public:
   explicit TrackManager(double gate_distance = 50.0, int max_misses = 2,
                         int confirmation_hits = 2, bool parallel = true,
-                        bool prefer_gpu = false);
+                        bool prefer_gpu = false, bool prefer_opencl = false);
   std::vector<Estimate> process_batch(double timestamp, const std::vector<Measurement>& measurements);
   const std::vector<Track>& tracks() const { return tracks_; }
 
@@ -42,6 +42,7 @@ class TrackManager {
   int confirmation_hits_;
   bool parallel_;
   bool prefer_gpu_;
+  bool prefer_opencl_;
 };
 
 }  // namespace tracker

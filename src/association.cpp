@@ -59,13 +59,16 @@ std::vector<double> cpu_squared_distances(const std::vector<TrackView>& tracks,
 
 std::vector<Match> nearest_neighbor_association(
     const std::vector<TrackView>& tracks, const std::vector<Measurement>& measurements,
-    double gate_distance, bool parallel, bool prefer_gpu) {
+    double gate_distance, bool parallel, bool prefer_gpu, bool prefer_opencl) {
   if (!std::isfinite(gate_distance) || gate_distance < 0.0)
     throw std::invalid_argument("gate distance must be finite and non-negative");
   if (tracks.empty() || measurements.empty()) return {};
   std::vector<double> distances;
-  if (prefer_gpu && gpu_backend_available() && tracks.size() * measurements.size() >= 4096)
-    distances = gpu_squared_distances(tracks, measurements);
+  if (prefer_opencl && opencl_backend_available() &&
+      tracks.size() * measurements.size() >= 4096)
+    distances = opencl_squared_distances(tracks, measurements);
+  else if (prefer_gpu && cuda_backend_available() && tracks.size() * measurements.size() >= 4096)
+    distances = cuda_squared_distances(tracks, measurements);
   else
     distances = cpu_squared_distances(tracks, measurements, parallel);
 

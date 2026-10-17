@@ -4,6 +4,7 @@ project(radar_tracker LANGUAGES CXX)
 include(CTest)
 
 option(TRACKER_ENABLE_CUDA "Build the CUDA association backend when available" ON)
+option(TRACKER_ENABLE_OPENCL "Build the portable OpenCL association backend when available" ON)
 option(TRACKER_ENABLE_THREADS "Enable parallel CPU association" ON)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -31,14 +32,30 @@ if(NOT TRACKER_HAS_CUDA)
   list(APPEND TRACKER_SOURCES src/gpu_association_stub.cpp)
 endif()
 
+set(TRACKER_HAS_OPENCL OFF)
+if(TRACKER_ENABLE_OPENCL)
+  find_package(OpenCL QUIET)
+  if(OpenCL_FOUND)
+    set(TRACKER_HAS_OPENCL ON)
+    list(APPEND TRACKER_SOURCES src/opencl_association.cpp)
+  endif()
+endif()
+if(NOT TRACKER_HAS_OPENCL)
+  list(APPEND TRACKER_SOURCES src/opencl_association_stub.cpp)
+endif()
+
 add_library(tracker_core ${TRACKER_SOURCES})
 target_include_directories(tracker_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+if(TRACKER_HAS_OPENCL)
+  target_link_libraries(tracker_core PRIVATE OpenCL::OpenCL)
+endif()
 if(TRACKER_ENABLE_THREADS)
   find_package(Threads REQUIRED)
   target_link_libraries(tracker_core PRIVATE Threads::Threads)
 endif()
 target_compile_definitions(tracker_core PUBLIC
   TRACKER_HAS_CUDA=$<BOOL:${TRACKER_HAS_CUDA}>
+  TRACKER_HAS_OPENCL=$<BOOL:${TRACKER_HAS_OPENCL}>
   TRACKER_ENABLE_THREADS=$<BOOL:${TRACKER_ENABLE_THREADS}>)
 
 if(TRACKER_HAS_CUDA)
@@ -76,4 +93,5 @@ if(BUILD_TESTING)
 endif()
 
 message(STATUS "CUDA association backend: ${TRACKER_HAS_CUDA}")
+message(STATUS "OpenCL association backend: ${TRACKER_HAS_OPENCL}")
 message(STATUS "Parallel CPU association: ${TRACKER_ENABLE_THREADS}")
