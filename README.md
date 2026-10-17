@@ -54,7 +54,7 @@ transfers dominated, which identifies the next optimization: persistent buffers.
 
 See [the report](docs/REPORT.md), [real-data notes](docs/REAL_DATA.md), and
 [portable acceleration notes](docs/PORTABLE_ACCELERATION.md) for details and
-limitations. Full CUDA measurements are in the
-[benchmark record](docs/BENCHMARK_RECORD.md) for backend comparison.
+limitations. Backend comparison measurements are in the
+[benchmark record](docs/BENCHMARK_RECORD.md).
 
 This is an educational project, not a safety-critical radar system.
