@@ -9,7 +9,7 @@ It includes:
 - Kalman and extended Kalman filters
 - Multiple-target tracking and clutter handling
 - Two-sensor fusion
-- CPU multithreading, CUDA acceleration, and portable OpenCL acceleration
+- CPU multithreading and portable OpenCL acceleration
 - Python tools for downloading data, running tests, and plotting results
 
 ## Run it
@@ -30,9 +30,9 @@ ctest --test-dir build --output-on-failure
 
 Plots and metrics are written to `real_output/`.
 
-Use `--accelerator cuda` for NVIDIA hardware or `--accelerator opencl` for the
-portable backend. The OpenCL path uses a float32 kernel so it can run on a wider
-range of GPUs, CPUs, and embedded accelerators.
+Use `--accelerator opencl` for the portable backend. It uses a float32 kernel so
+it can run on a wide range of GPUs, CPUs, and embedded accelerators. An optional
+CUDA backend is also available for NVIDIA hardware.
 
 ## Results
 
@@ -48,10 +48,6 @@ The real-data test uses sequence 158 from the
 - 0 identity switches
 - 0.37 m position RMSE
 
-On an NVIDIA RTX 2000 Ada, CUDA became faster end to end at 1,024 objects. At
-4,096 objects, the CUDA kernel was 125.6x faster than serial CPU; including data
-transfer and allocation, the full operation was 1.34x faster.
-
 On an Apple M2, the portable OpenCL kernel was 59.7x faster than serial CPU at
 1,024 objects. Its one-shot end-to-end path was slower because buffer setup and
 transfers dominated, which identifies the next optimization: persistent buffers.
@@ -59,6 +55,6 @@ transfers dominated, which identifies the next optimization: persistent buffers.
 See [the report](docs/REPORT.md), [real-data notes](docs/REAL_DATA.md), and
 [portable acceleration notes](docs/PORTABLE_ACCELERATION.md) for details and
 limitations. Full CUDA measurements are in the
-[benchmark record](docs/BENCHMARK_RECORD.md).
+[benchmark record](docs/BENCHMARK_RECORD.md) for backend comparison.
 
 This is an educational project, not a safety-critical radar system.
